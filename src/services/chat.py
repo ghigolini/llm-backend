@@ -20,20 +20,6 @@ class ChatService:
 
     # Function to call Converse API
     def call_converse_api(self, system_message, user_message, model_id, streaming=False, summarized=False):
-        """
-        Calls the AWS Bedrock Converse API.
-
-        Parameters:
-        - system_message: The initial system message
-        - user_message: The user's input message
-        - model_id: The name of the model to use
-        - streaming: Boolean indicating if streaming mode is on/off
-
-        Returns:
-        - The response from the API
-        """
-
-        output = []
 
         # Inference parameters to use.
         temperature = 0.5
@@ -65,7 +51,7 @@ class ChatService:
         print(prev)
         message = {
             "role": "user",
-            "content": [{"text": str(prev) + ". FINE RIASSUNTO " + user_message}]
+            "content": [{"text": str(prev) + ". ORA RISPONDI ALLA SEGUENTE FRASE: " + user_message}]
         }
         self.messages.append(user_message)
         print(self.messages)
@@ -115,3 +101,8 @@ class ChatService:
             response = {'answer': r}
             return jsonify(response)
         return ''
+    
+    def reset_chat(self):
+        self.messages = []
+        self.responses = []
+        return []
