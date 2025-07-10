@@ -1,0 +1,1 @@
+This is the back-end used during a seminar in university about LLMs held by Reply. It is written in Python using Flask.
