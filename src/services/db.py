@@ -5,25 +5,47 @@ from lancedb.embeddings import get_registry
 import pandas as pd
 import os
 
-class VectorDBHandler:
+class VectorDBHandler:            
     def __init__(self):
         args = {}
         args["name"] = "amazon.titan-embed-text-v2:0"
         args["region"] = "eu-central-1"
-        model = get_registry().get("bedrock-text").create(**args)
+        self.model = get_registry().get("bedrock-text").create(**args)
+        self.table_name = "rag"
         
         class TextModel(LanceModel):
-            text: str = model.SourceField()
-            vector: Vector(model.ndims()) = model.VectorField()
+            text: str = self.model.SourceField()
+            vector: Vector(self.model.ndims()) = self.model.VectorField()
         
-        table_name = "rag"
+        self.textModel = TextModel
         
-        self.db = lancedb.connect("../tables")
+    def load_files(self, files):
+        chunks = []
+        for file in files:
+            text = file.read().decode()
+            chunks.append({"text": text})
+        
+        self.db = lancedb.connect("./tables")
+        self.db.drop_table(self.table_name)
         db_tables= self.db.table_names()
-        if "table_name" not in db_tables:
-            print(f"Creating table {table_name}...")
-            tbl = self.db.create_table(table_name, schema=TextModel, mode="overwrite")
-            tbl.add(chunks)
+        if self.table_name not in db_tables:
+            print(f"Creating table {self.table_name}...")
+            self.tbl = self.db.create_table(self.table_name, schema=self.textModel, mode="overwrite")
+            self.tbl.add(chunks)
         else:
-            print(f"Table {table_name} already exists, using existing table...")
-            tbl = db.open_table(table_name)
+            print(f"Table {self.table_name} already exists, using existing table...")
+            self.tbl = self.db.open_table(self.table_name)
+        
+    def get_best(self, n, message):
+        rs = self.tbl.search(message).limit(n)
+        rs.to_pydantic(self.textModel)
+        df = rs.to_pandas()
+        
+        res = []
+        
+        for i in range(min(n, len(df))):
+            res.append(df.iloc[i]["text"])
+        
+        return res
+        
+        

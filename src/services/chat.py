@@ -1,10 +1,11 @@
 import boto3
 import logging
 import json
+from services.db import VectorDBHandler
 from flask import jsonify, request
 
 class ChatService:        
-    def __init__(self, sys_prompt = "L'utente non può riferirsi a messaggi precedenti a meno che non lo richieda esplicitamente, non possono esserci ambiguità. Tutte le tue risposte riguardano il testo dopo la scritta FINE RIASSUNTO"):
+    def __init__(self, sys_prompt = "Sei un ottimo aiutante, quando restituisci una risposta non sottolinei mai come l'hai ricavata dai messaggi precedenti a meno che non viene esplicitamente chiesto dall'utente. Non numeri mai i messaggi. Rispondi in modo conciso ma preciso. Tutte le tue risposte riguardano il testo dopo la scritta FINE RIASSUNTO"):
         self.system_message = ""
         self.model_id = ""
         self.messages = []
@@ -12,6 +13,7 @@ class ChatService:
         self.guardrails = False
         self.rag = False
         self.rag_files = []
+        self.vdb_handler = VectorDBHandler()
                 
         self.logger = logging.getLogger(__name__)
         logging.basicConfig(level=logging.INFO)
@@ -51,16 +53,20 @@ class ChatService:
         prev = []
         for i in range(len(self.messages)):
             prev.append(["Domanda: " + str(self.messages[i]) + "\nRisposta: " + str(self.responses[i])])
-        print(prev)
+        
+        if self.rag == "true":
+            rag_data = self.vdb_handler.get_best(3, user_message)
+            print(rag_data)
+            prev += str(rag_data)
+        
         message = {
             "role": "user",
-            "content": [{"text": str(prev) + ". ORA RISPONDI ALLA SEGUENTE FRASE: " + user_message}]
+            "content": [{"text": str(prev) + ". ORA RISPONDI ALLA SEGUENTE FRASE: " + "" + user_message}]
         }
         self.messages.append(user_message)
-        print(self.messages)
+        #print(self.messages)
         if not streaming:
-            
-            if self.guardrails:
+            if self.guardrails == "true":
                 guardrail_config = {
                     "guardrailIdentifier": "bz9vanuflnf5",
                     "guardrailVersion": "1",
@@ -102,9 +108,11 @@ class ChatService:
     
     def summarize_prev_conv(self):
         r = ""
-        c = ChatService("Sei un riassumitore di conversazioni, inizi i riassunti con RIASSUNTO e li termini con FINE RIASSUNTO")
+        c = ChatService("Sei specializzato nel riassumere conversazioni senza perdere alcuna informazione, inizi i riassunti con RIASSUNTO e li termini con FINE RIASSUNTO")
         r = c.call_converse_api(self.system_message, "Riassumi la seguente conversazione tenendo conto che il messaggio i-esimo corrisponde alla risposta i-esima: " + str(self.messages) + str(self.responses), self.model_id, summarized=True)
+            
         print("r: " + str(r))
+        
         return r
 
     def init_model(self, sys_prompt = "Sei un ottimo assistente"):
@@ -144,11 +152,10 @@ class ChatService:
         for file in self.rag_files:
             if file.filename != "":
                 uploaded_filenames.append(file.filename)
+                
+        self.vdb_handler.load_files(self.rag_files)
         
         return jsonify({
             "uploaded": True,
             "filenames": uploaded_filenames,
         })
-        
-    def create_vector_db(self):
-        
