@@ -11,6 +11,7 @@ class ChatService:
         self.responses = []
         self.guardrails = False
         self.rag = False
+        self.rag_files = []
                 
         self.logger = logging.getLogger(__name__)
         logging.basicConfig(level=logging.INFO)
@@ -134,3 +135,20 @@ class ChatService:
     def set_rag(self):
         self.rag = request.form.get('value')
         return self.rag
+    
+    def set_rag_files(self):
+        self.rag_files = request.files.getlist("files")
+        print(request.files)
+        uploaded_filenames = []
+        
+        for file in self.rag_files:
+            if file.filename != "":
+                uploaded_filenames.append(file.filename)
+        
+        return jsonify({
+            "uploaded": True,
+            "filenames": uploaded_filenames,
+        })
+        
+    def create_vector_db(self):
+        

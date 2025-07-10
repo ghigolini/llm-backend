@@ -29,3 +29,7 @@ def set_guardrails():
 @app.route('/api/chat/rag', methods=['POST'])
 def set_rag():
     return chat_service.set_rag()
+
+@app.route('/api/chat/set-rag-files', methods=['POST']) 
+def set_rag_files():
+    return chat_service.set_rag_files()
