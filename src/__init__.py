@@ -8,7 +8,7 @@ from services.chat import *
 app = Flask(__name__)
 CORS(app, origins=["http://127.0.0.1:3000", "http://localhost:3000"])
 
-chat_service = ChatService()
+chat_service = ChatService(sys_prompt="Rispondi in modo quanto più dettagliato possibile.")
 
 # @app.route("/")
 # def home():
@@ -21,3 +21,11 @@ def answer():
 @app.route('/api/chat/reset', methods=['GET'])
 def reset():
     return chat_service.reset_chat()
+
+@app.route('/api/chat/guardrails', methods=['POST'])
+def set_guardrails():
+    return chat_service.set_guardrails()
+
+@app.route('/api/chat/rag', methods=['POST'])
+def set_rag():
+    return chat_service.set_rag()

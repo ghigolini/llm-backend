@@ -9,6 +9,8 @@ class ChatService:
         self.model_id = ""
         self.messages = []
         self.responses = []
+        self.guardrails = False
+        self.rag = False
                 
         self.logger = logging.getLogger(__name__)
         logging.basicConfig(level=logging.INFO)
@@ -56,14 +58,30 @@ class ChatService:
         self.messages.append(user_message)
         print(self.messages)
         if not streaming:
-            # Call the Converse API
-            response = self.client.converse(
-                modelId=model_id,
-                messages=[message],
-                system=system_prompts,
-                inferenceConfig=inference_config,
-                additionalModelRequestFields=additional_model_fields
-            )
+            
+            if self.guardrails:
+                guardrail_config = {
+                    "guardrailIdentifier": "bz9vanuflnf5",
+                    "guardrailVersion": "1",
+                    "trace": "enabled"
+                }
+                # Call the Converse API
+                response = self.client.converse(
+                    modelId=model_id,
+                    messages=[message],
+                    system=system_prompts,
+                    inferenceConfig=inference_config,
+                    additionalModelRequestFields=additional_model_fields,
+                    guardrailConfig=guardrail_config
+                )
+            else:
+                response = self.client.converse(
+                    modelId=model_id,
+                    messages=[message],
+                    system=system_prompts,
+                    inferenceConfig=inference_config,
+                    additionalModelRequestFields=additional_model_fields
+                )
             self.responses.append(response["output"]["message"]["content"][0]["text"])
             print(self.responses)
             self.logger.info(f"Response from Converse API:\n{json.dumps(response, indent=2)}")
@@ -77,6 +95,8 @@ class ChatService:
             self.logger.info("Output tokens: %s", token_usage['outputTokens'])
             self.logger.info("Total tokens: %s", token_usage['totalTokens'])
             self.logger.info("Stop reason: %s", response['stopReason'])
+            
+        
         return response["output"]["message"]["content"][0]["text"]
     
     def summarize_prev_conv(self):
@@ -105,4 +125,12 @@ class ChatService:
     def reset_chat(self):
         self.messages = []
         self.responses = []
-        return []
+        return "Chat reset"
+        
+    def set_guardrails(self):
+        self.guardrails = request.form.get('value')
+        return self.guardrails
+    
+    def set_rag(self):
+        self.rag = request.form.get('value')
+        return self.rag
